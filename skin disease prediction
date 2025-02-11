@@ -1,0 +1,57 @@
+import tensorflow as tf
+from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras import layers, models
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Load the pre-trained VGG16 model + higher-level layers
+base_model = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+
+# Freeze the base_model
+base_model.trainable = False
+
+# Create the new model
+model = models.Sequential([
+    base_model,
+    layers.GlobalAveragePooling2D(),
+    layers.Dense(1024, activation='relu'),
+    layers.Dense(512, activation='relu'),
+    layers.Dense(5, activation='softmax')  # Adjust number of classes (5 in this example)
+])
+
+# Compile the model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Model Summary
+model.summary()
+
+# Load an image and preprocess it for prediction
+def load_and_preprocess_image(img_path):
+    img = image.load_img(img_path, target_size=(224, 224))  # Resize to fit VGG input
+    img_array = image.img_to_array(img)  # Convert image to array
+    img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
+    img_array = tf.keras.applications.vgg16.preprocess_input(img_array)  # Preprocess for VGG16
+    return img_array
+
+# Example of using the model for prediction
+def predict_skin_disease(img_path):
+    img_array = load_and_preprocess_image(img_path)
+    prediction = model.predict(img_array)  # Predict on the input image
+    predicted_class = np.argmax(prediction, axis=1)  # Get the class index
+    print(f"Predicted class index: {predicted_class[0]}")
+
+    # Mapping the predicted class index to disease names
+    class_names = ['Melanoma', 'Basal Cell Carcinoma', 'Squamous Cell Carcinoma', 'Vascular Skin Tumor', 'Actinic Keratosis']
+    predicted_disease = class_names[predicted_class[0]]
+    print(f"Predicted disease: {predicted_disease}")
+
+    # Visualize the input image
+    img = image.load_img(img_path)
+    plt.imshow(img)
+    plt.title(f"Prediction: {predicted_disease}")
+    plt.show()
+
+# Example usage: Replace with your own image path
+img_path = 'path_to_your_image.jpg'  # Specify path to your image
+predict_skin_disease(img_path)
